@@ -92,7 +92,26 @@ function addPlayer(
 
         ready: false,
 
-        joinedAt: Date.now()
+        joinedAt: Date.now(),
+
+        // Position, kept only for showing this player to their lobby-mates.
+        x: 0,
+
+        y: 0,
+
+        z: 0,
+
+        angle: 0,
+
+        moving: false,
+
+        training: false,
+
+        inLobby: true,
+
+        // Which stage's dino this player is wearing, so lobby-mates see the
+        // real thing rather than a generic placeholder.
+        evolutionIndex: 0
 
     };
 
@@ -221,6 +240,61 @@ function getLobby(lobbyId) {
 
 
 // --------------------------------------------------
+// UPDATE PLAYER POSITION
+// --------------------------------------------------
+
+function updatePlayerPosition(
+    lobbyId,
+    socketId,
+    position
+) {
+
+    const lobby =
+        lobbies.get(lobbyId);
+
+
+    if (!lobby) {
+        return null;
+    }
+
+
+    const player =
+        lobby.players.find(
+            player =>
+                player.socketId === socketId
+        );
+
+
+    if (!player) {
+        return null;
+    }
+
+
+    player.x = position.x;
+
+    player.y = position.y;
+
+    player.z = position.z;
+
+    player.angle = position.angle;
+
+    player.moving = position.moving;
+
+    player.training = position.training;
+
+    player.inLobby = position.inLobby;
+
+    if (Number.isInteger(position.evolutionIndex)) {
+        player.evolutionIndex = position.evolutionIndex;
+    }
+
+
+    return player;
+
+}
+
+
+// --------------------------------------------------
 // GET ALL LOBBIES
 // --------------------------------------------------
 
@@ -288,7 +362,21 @@ function getLobbyData(lobby) {
 
                 username: player.username,
 
-                ready: player.ready
+                ready: player.ready,
+
+                x: player.x ?? 0,
+
+                y: player.y ?? 0,
+
+                z: player.z ?? 0,
+
+                angle: player.angle ?? 0,
+
+                inLobby: player.inLobby !== false,
+
+                evolutionIndex: player.evolutionIndex ?? 0,
+
+                training: Boolean(player.training)
 
             })
         ),
@@ -323,6 +411,8 @@ module.exports = {
     getLobby,
 
     getAllLobbies,
+
+    updatePlayerPosition,
 
     startGame,
 

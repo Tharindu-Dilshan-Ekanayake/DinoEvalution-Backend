@@ -170,6 +170,127 @@ module.exports = function matchmakingSocket(
     );
 
 
+    // ==================================================
+    // PLAYER MOVE (presence only - not authoritative)
+    // ==================================================
+
+    socket.on(
+        "player_move",
+        (data) => {
+
+            const lobbyId =
+                socket.data.lobbyId;
+
+
+            if (!lobbyId) {
+                return;
+            }
+
+
+            const x = Number(data?.x);
+
+            const y = Number(data?.y);
+
+            const z = Number(data?.z);
+
+            const angle = Number(data?.angle);
+
+            const moving = Boolean(data?.moving);
+
+            // On a training pad: legs keep working even though x/z don't move.
+            const training = Boolean(data?.training);
+
+            // Hub coordinates are chamber-local; arena coordinates are already
+            // world space - the client tags which one it just sent.
+            const inLobby = Boolean(data?.inLobby);
+
+            // Clamped, not just parsed: every other client uses this straight
+            // as an array index into their own evolutions list, so a bad value
+            // here would crash rendering on somebody else's screen.
+            const rawEvolutionIndex = Number(data?.evolutionIndex);
+            const evolutionIndex =
+                Number.isInteger(rawEvolutionIndex) &&
+                rawEvolutionIndex >= 0 &&
+                rawEvolutionIndex <= 64
+                    ? rawEvolutionIndex
+                    : 0;
+
+
+            if (
+                !Number.isFinite(x) ||
+                !Number.isFinite(y) ||
+                !Number.isFinite(z) ||
+                !Number.isFinite(angle)
+            ) {
+                return;
+            }
+
+
+            matchmakingService.updatePlayerPosition(
+                lobbyId,
+                socket.id,
+                { x, y, z, angle, moving, training, inLobby, evolutionIndex }
+            );
+
+
+            // Relayed to everyone else in the lobby, not echoed back to sender.
+            socket.to(lobbyId).emit(
+                "player_moved",
+                { id: socket.id, x, y, z, angle, moving, training, inLobby, evolutionIndex }
+            );
+
+        }
+    );
+
+
+    // ==================================================
+    // PLAYER ATTACK (one-shot swing pulse, not a stored state)
+    // ==================================================
+
+    socket.on(
+        "player_attack",
+        (data) => {
+
+            const lobbyId =
+                socket.data.lobbyId;
+
+
+            if (!lobbyId) {
+                return;
+            }
+
+
+            const crit = Boolean(data?.crit);
+
+
+            // Relayed only, never stored - a swing is a moment, not a
+            // position players need to be caught up on when they join.
+            socket.to(lobbyId).emit(
+                "player_attacked",
+                { id: socket.id, crit }
+            );
+
+        }
+    );
+
+
+    // ==================================================
+    // DISCONNECT
+    // ==================================================
+
+    socket.on(
+        "disconnect",
+        () => {
+
+            handleDisconnect(
+                io,
+                socket
+            );
+
+        }
+    );
+
+
 };
 
 
